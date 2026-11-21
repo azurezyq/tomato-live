@@ -1,0 +1,20 @@
+{
+  "name": "tomato-live",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "services/stt-proxy"
+  ],
+  "scripts": {
+    "dev": "concurrently -n web,stt -c cyan,magenta \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=services/stt-proxy\"",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:stt": "npm run dev --workspace=services/stt-proxy",
+    "build": "npm run build --workspace=services/stt-proxy && npm run build --workspace=apps/web",
+    "test": "npm run test --workspace=services/stt-proxy && npm run test --workspace=apps/web",
+    "typecheck": "npm run typecheck --workspace=services/stt-proxy && npm run typecheck --workspace=apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

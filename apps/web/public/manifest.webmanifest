@@ -1,0 +1,33 @@
+{
+  "name": "番茄实时语音 · Tomato Live",
+  "short_name": "番茄语音",
+  "description": "低延迟中文实时语音对话助手，基于 Gemini 3.5 Transcribe、Flash-Lite、Gemini 4 Hydrogen 联网搜索与流式 TTS",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#FAF6F1",
+  "background_color": "#FAF6F1",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

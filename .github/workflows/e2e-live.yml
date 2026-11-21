@@ -1,0 +1,70 @@
+name: Real Live E2E Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  e2e-live:
+    name: Real Vertex AI + Cloud Run E2E
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Resolve E2E targets
+        id: targets
+        env:
+          VAR_PROJECT: ${{ vars.FIREBASE_PROJECT_ID }}
+          AUTH_PROJECT: ${{ steps.auth.outputs.project_id }}
+          VAR_SITE: ${{ secrets.FIREBASE_HOSTING_SITE || vars.FIREBASE_HOSTING_SITE }}
+          VAR_STT_URL: ${{ secrets.STT_HTTP_URL || vars.STT_HTTP_URL }}
+          GCP_REGION: ${{ vars.GCP_REGION || 'asia-east1' }}
+          CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_SERVICE || 'tomato-live-stt-proxy' }}
+        run: |
+          PROJECT="${VAR_PROJECT:-$AUTH_PROJECT}"
+          SITE="${VAR_SITE:-$PROJECT}"
+          STT_URL="$VAR_STT_URL"
+          if [ -z "$STT_URL" ]; then
+            STT_URL=$(gcloud run services describe "$CLOUD_RUN_SERVICE" \
+              --project="$PROJECT" \
+              --region="$GCP_REGION" \
+              --format="value(status.url)" 2>/dev/null || true)
+          fi
+          echo "::add-mask::${PROJECT}"
+          echo "::add-mask::${SITE}"
+          [ -n "$STT_URL" ] && echo "::add-mask::${STT_URL}"
+          echo "project_id=${PROJECT}" >> "$GITHUB_OUTPUT"
+          echo "pwa_url=https://${SITE}.web.app" >> "$GITHUB_OUTPUT"
+          echo "stt_url=${STT_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Run Real Live E2E Suite (7 endpoint & model checks)
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ steps.targets.outputs.project_id }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION || 'global' }}
+          PWA_URL: ${{ steps.targets.outputs.pwa_url }}
+          STT_HTTP_URL: ${{ steps.targets.outputs.stt_url }}
+        run: node scripts/e2e-live.mjs
+
+      - name: Run 8-Turn Real Multi-Turn Chinese Conversation E2E
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ steps.targets.outputs.project_id }}
+          VERTEX_LOCATION: ${{ vars.VERTEX_LOCATION || 'global' }}
+        run: node scripts/e2e-multiturn.mjs
