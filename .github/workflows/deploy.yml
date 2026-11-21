@@ -120,10 +120,12 @@ jobs:
             GOOGLE_CLOUD_PROJECT=${{ steps.resolve-project.outputs.project_id }}
             ALLOWED_ORIGINS=https://${{ steps.ensure-site.outputs.site_id }}.web.app;https://${{ steps.ensure-site.outputs.site_id }}.firebaseapp.com;https://${{ steps.resolve-project.outputs.project_id }}.web.app;https://${{ steps.resolve-project.outputs.project_id }}.firebaseapp.com
             ALLOWED_EMAILS=${{ secrets.ALLOWED_EMAILS || vars.ALLOWED_EMAILS }}
+            MAX_DAILY_TURNS=${{ vars.MAX_DAILY_TURNS || '1000' }}
           flags: >-
             --allow-unauthenticated
             --timeout=3600
             --session-affinity
+            --max-instances=1
 
       - name: Derive WebSocket URL
         id: derive-ws

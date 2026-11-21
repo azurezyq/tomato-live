@@ -2,6 +2,7 @@ import 'dotenv/config';
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { verifyWebSocketAuth } from './auth.js';
+import { dailyTurnLimiter } from './rateLimit.js';
 import { GeminiTranscribeSession } from './transcribeSession.js';
 import { handleVertexApiRequest } from './vertexApi.js';
 import type { ClientControlMessage, ServerEventMessage } from './types.js';
@@ -43,6 +44,12 @@ export function createSttProxyServer(): http.Server {
 
     if (!isOriginAllowed(req.headers.origin)) {
       socket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
+    if (dailyTurnLimiter.isLimitReached()) {
+      socket.write('HTTP/1.1 429 Too Many Requests\r\n\r\n');
       socket.destroy();
       return;
     }

@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { GoogleGenAI } from '@google/genai';
 import { verifyWebSocketAuth } from './auth.js';
+import { dailyTurnLimiter } from './rateLimit.js';
 
 interface HistoryTurn {
   role: 'user' | 'model';
@@ -79,6 +80,7 @@ export async function handleVertexApiRequest(
         project: process.env.GOOGLE_CLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || '',
         location: process.env.VERTEX_LOCATION || 'global',
         model: process.env.STT_MODEL || 'gemini-3.5-transcribe-live',
+        dailyTurns: dailyTurnLimiter.getUsage(),
       })
     );
     return true;
@@ -104,6 +106,26 @@ export async function handleVertexApiRequest(
     await verifyWebSocketAuth(req);
   } catch (err) {
     sendJsonError(res, 401, err instanceof Error ? err.message : 'Unauthorized');
+    return true;
+  }
+
+  if (pathname === '/api/grounded-stream') {
+    const turnStatus = dailyTurnLimiter.consumeTurn();
+    if (!turnStatus.allowed) {
+      sendJsonError(
+        res,
+        429,
+        `Daily turn limit reached (${turnStatus.used}/${turnStatus.limit} turns on ${turnStatus.date} UTC). Please try again tomorrow.`
+      );
+      return true;
+    }
+  } else if (dailyTurnLimiter.isLimitReached()) {
+    const usage = dailyTurnLimiter.getUsage();
+    sendJsonError(
+      res,
+      429,
+      `Daily turn limit reached (${usage.used}/${usage.limit} turns on ${usage.date} UTC). Please try again tomorrow.`
+    );
     return true;
   }
 
